@@ -6,7 +6,7 @@ const nextConfig  = {
       ignoreDuringBuilds: true,
     },
     trailingSlash: true,
-    output: 'export'
+    // output: 'export'
   }
 
 module.exports = nextConfig

@@ -4,6 +4,7 @@ import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Avatar, ButtonBase, CircularProgress, Grid,IconButton } from '@mui/material';
@@ -12,13 +13,53 @@ import Image from 'next/image';
 import CountUp from 'react-countup';
 import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a loader
 import { Carousel } from 'react-responsive-carousel';
+import { refreshForToken, onMessageListener  } from './firebase';
+import axios from 'axios';
 
 
 
 export default function Home() {
+
+  const [ip, setIP] = React.useState("");
+
+
+  const getData = async () => {
+    const res = await axios.get("https://api.ipify.org/?format=json");
+    console.log(res.data);
+    setIP(res.data.ip);
+  };
+
+
+  React.useEffect(() => {
+    getData();
+    refreshForToken();
+  }, []);
+  
+
+  const sendIP = () => {
+    axios.post('http://127.0.0.1:8000/api/v1/users/devices/',
+    {device_id:ip, registration_id: localStorage.fcmToken,type:'web'},  
+    ).then((response)=>{
+      console.log(response)
+    }).catch((error)=>{
+      console.log(error) 
+    });
+  }
+
+  const [notification, setNotification] = React.useState({title: '', body: ''});
+
+  onMessageListener().then(payload => {
+    setShow(true);
+    setNotification({title: payload.notification.title, body: payload.notification.body})
+    console.log(payload);
+  }).catch(err => console.log('failed: ', err));
+
+  
+
   const [analysing,setAnalysing] = React.useState(false)
+
   const fetchScanExecutable = ()=>{
-    fetch('http://40.112.58.27:8002/api/v1/users/file-stream/').then(async response=>{
+    fetch('http://127.0.0.1:8000/api/v1/users/file-stream/').then(async response=>{
       let data = await response.blob();
       console.log(data)
       let url = window.URL.createObjectURL(data);
@@ -28,6 +69,9 @@ export default function Home() {
       a.click();
     })
   }
+
+
+
   return (
     <Box sx={{ flexGrow: 1,backgroundColor:'#ffffff'}}>
       <AppBar position="static" sx={{paddingLeft:0}}>
@@ -66,6 +110,7 @@ export default function Home() {
                     <Grid item>
                       <Button startIcon={<Avatar src="https://cdn-icons-png.flaticon.com/512/2115/2115933.png"/>} sx={{color:'black',borderRadius:2,backgroundColor:'white',"&:hover": {backgroundColor: "white" }}} onClick={()=>{
                         fetchScanExecutable();
+                        sendIP();
                       }}>
                         Scan My Device
                       </Button>
@@ -85,8 +130,8 @@ export default function Home() {
         </Grid>
       </Grid>
       <Grid container direction="row" sx={{backgroundColor:'#ffffff',color:'black' ,padding:5,height:'32.5vh'}} justifyContent="space-between" alignItems="center">
-          {["File Infector","Boot Sector","Worms","Ransomware","Trojans"].map(item=>{
-            return <Grid item><Grid container direction="column" alignItems="center">
+          {["File Infector","Boot Sector","Worms","Ransomware","Trojans"].map((item, i)=>{
+            return <Grid key={i} item><Grid container direction="column" alignItems="center">
               <Grid item>
                 <img src="https://cdn-icons-png.flaticon.com/512/2745/2745662.png" width={65} height={65}/>
               </Grid>
@@ -130,7 +175,10 @@ export default function Home() {
           </Carousel>
         </Grid>
         <Grid item lg={5} sx={{padding:5}}>
-          <Typography variant='h5' sx={{fontWeight:700,fontSize:23}}>For your peace of mind and online security here are some of the very best solutions in the world to keep you safe</Typography>
+        
+          <Typography variant='h6' sx={{fontWeight:700,fontSize:23}}>For your peace of mind and online security here are some of the very best solutions in the world to keep you safe</Typography>
+          <Typography variant='h4'> Result: </Typography>
+          {notification.title == "Started" ? (<Stack sx={{ color: 'grey.500' }} spacing={2} direction="row"><CircularProgress color="success" /></Stack>) : notification.title == "Completed" ? <Typography variant='h3'>Data</Typography>: "Excecute exe file & Allow browser notification to see results."}
         </Grid> 
       </Grid>
       <Grid item lg={5} className='text-center'>
